@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/yourusername/vertice-back/config"
+	"github.com/blackzarifa/vertice-back/config"
 )
 
 func main() {
