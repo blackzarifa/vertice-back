@@ -19,10 +19,12 @@ func main() {
 
 	log.Println("Database connected successfully!")
 
-	port := os.Getenv("SERVER_PORT")
-	if port == "" {
-		port = "8080"
+	if err := config.RunMigrations(db); err != nil {
+		log.Fatal("Migration failed:", err)
 	}
+	log.Println("Migrations completed successfully!")
+
+	port := os.Getenv("SERVER_PORT")
 
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		if err := db.Ping(); err != nil {

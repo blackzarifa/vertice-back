@@ -18,12 +18,32 @@ func LoadEnv() {
 }
 
 func ConnectDB() (*sql.DB, error) {
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true",
+	dbName := os.Getenv("DB_NAME")
+	
+	dsnWithoutDB := fmt.Sprintf("%s:%s@tcp(%s:%s)/",
 		os.Getenv("DB_USER"),
 		os.Getenv("DB_PASSWORD"),
 		os.Getenv("DB_HOST"),
 		os.Getenv("DB_PORT"),
-		os.Getenv("DB_NAME"),
+	)
+
+	tempDB, err := sql.Open("mysql", dsnWithoutDB)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = tempDB.Exec(fmt.Sprintf("CREATE DATABASE IF NOT EXISTS %s", dbName))
+	if err != nil {
+		return nil, err
+	}
+	tempDB.Close()
+
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true&multiStatements=true",
+		os.Getenv("DB_USER"),
+		os.Getenv("DB_PASSWORD"),
+		os.Getenv("DB_HOST"),
+		os.Getenv("DB_PORT"),
+		dbName,
 	)
 
 	db, err := sql.Open("mysql", dsn)
