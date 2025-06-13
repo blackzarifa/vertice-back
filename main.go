@@ -1,11 +1,13 @@
 package main
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
 	"os"
 
 	"github.com/blackzarifa/vertice-back/config"
+	"github.com/gorilla/mux"
 )
 
 func main() {
@@ -24,20 +26,32 @@ func main() {
 	}
 	log.Println("Migrations completed successfully!")
 
-	port := os.Getenv("SERVER_PORT")
+	router := mux.NewRouter()
 
-	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+	router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		if err := db.Ping(); err != nil {
 			w.WriteHeader(http.StatusServiceUnavailable)
-			w.Write([]byte("Database connection failed"))
+			json.NewEncoder(w).Encode(map[string]string{
+				"status":  "error",
+				"message": "Database connection failed",
+			})
 			return
 		}
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("Server is healthy"))
-	})
+		json.NewEncoder(w).Encode(map[string]string{
+			"status":  "healthy",
+			"message": "Server is running",
+		})
+	}).Methods("GET")
+
+	port := os.Getenv("SERVER_PORT")
+	if port == "" {
+		port = "8080"
+	}
 
 	log.Printf("Server starting on port %s", port)
-	if err := http.ListenAndServe(":"+port, nil); err != nil {
+	if err := http.ListenAndServe(":"+port, router); err != nil {
 		log.Fatal("Server failed to start:", err)
 	}
 }
