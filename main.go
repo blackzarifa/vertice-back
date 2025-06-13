@@ -1,13 +1,12 @@
 package main
 
 import (
-	"encoding/json"
 	"log"
 	"net/http"
 	"os"
 
 	"github.com/blackzarifa/vertice-back/config"
-	"github.com/gorilla/mux"
+	"github.com/gin-gonic/gin"
 )
 
 func main() {
@@ -26,24 +25,75 @@ func main() {
 	}
 	log.Println("Migrations completed successfully!")
 
-	router := mux.NewRouter()
+	// Create Gin router with default middleware (logger + recovery)
+	router := gin.Default()
 
-	router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+	// Basic health check
+	router.GET("/health", func(c *gin.Context) {
 		if err := db.Ping(); err != nil {
-			w.WriteHeader(http.StatusServiceUnavailable)
-			json.NewEncoder(w).Encode(map[string]string{
+			c.JSON(http.StatusServiceUnavailable, gin.H{
 				"status":  "error",
 				"message": "Database connection failed",
 			})
 			return
 		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(map[string]string{
+
+		c.JSON(http.StatusOK, gin.H{
 			"status":  "healthy",
 			"message": "Server is running",
 		})
-	}).Methods("GET")
+	})
+
+	// Example: Path parameters
+	router.GET("/users/:id", func(c *gin.Context) {
+		id := c.Param("id")
+		c.JSON(200, gin.H{
+			"message": "You requested user",
+			"id":      id,
+		})
+	})
+
+	// Example: JSON body parsing
+	router.POST("/login", func(c *gin.Context) {
+		var loginReq struct {
+			CPF   string `json:"cpf" binding:"required"`
+			Senha string `json:"senha" binding:"required"`
+		}
+
+		// This automatically parses JSON and validates required fields
+		if err := c.ShouldBindJSON(&loginReq); err != nil {
+			c.JSON(400, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(200, gin.H{
+			"message": "Login attempt",
+			"cpf":     loginReq.CPF,
+		})
+	})
+
+	// Example: Query parameters
+	router.GET("/contas", func(c *gin.Context) {
+		// GET /contas?tipo=POUPANCA&limit=10
+		tipo := c.Query("tipo")                // "POUPANCA"
+		limit := c.DefaultQuery("limit", "20") // "10" or default "20"
+
+		c.JSON(200, gin.H{
+			"tipo":  tipo,
+			"limit": limit,
+		})
+	})
+
+	// Group routes with common prefix
+	api := router.Group("/api/v1")
+	{
+		api.GET("/clientes", func(c *gin.Context) {
+			c.JSON(200, gin.H{"endpoint": "list clientes"})
+		})
+		api.POST("/clientes", func(c *gin.Context) {
+			c.JSON(201, gin.H{"endpoint": "create cliente"})
+		})
+	}
 
 	port := os.Getenv("SERVER_PORT")
 	if port == "" {
@@ -51,7 +101,5 @@ func main() {
 	}
 
 	log.Printf("Server starting on port %s", port)
-	if err := http.ListenAndServe(":"+port, router); err != nil {
-		log.Fatal("Server failed to start:", err)
-	}
+	router.Run(":" + port)
 }
