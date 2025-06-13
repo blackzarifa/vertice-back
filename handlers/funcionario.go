@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/blackzarifa/vertice-back/models"
@@ -27,23 +28,24 @@ func CreateFuncionario(db *sql.DB) gin.HandlerFunc {
 		defer tx.Rollback()
 
 		var enderecoID int
-		err = tx.QueryRow(`
+		result, err := tx.Exec(`
 			INSERT INTO endereco (cep, local, numero_casa, bairro, cidade, estado, complemento)
 			VALUES (?, ?, ?, ?, ?, ?, ?)`,
 			req.Endereco.CEP, req.Endereco.Local, req.Endereco.NumeroCasa,
 			req.Endereco.Bairro, req.Endereco.Cidade, req.Endereco.Estado,
-			req.Endereco.Complemento).Scan(&enderecoID)
+			req.Endereco.Complemento)
 		
 		if err != nil {
-			result, _ := tx.Exec(`
-				INSERT INTO endereco (cep, local, numero_casa, bairro, cidade, estado, complemento)
-				VALUES (?, ?, ?, ?, ?, ?, ?)`,
-				req.Endereco.CEP, req.Endereco.Local, req.Endereco.NumeroCasa,
-				req.Endereco.Bairro, req.Endereco.Cidade, req.Endereco.Estado,
-				req.Endereco.Complemento)
-			enderecoID64, _ := result.LastInsertId()
-			enderecoID = int(enderecoID64)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create address"})
+			return
 		}
+		
+		enderecoID64, err := result.LastInsertId()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get address ID"})
+			return
+		}
+		enderecoID = int(enderecoID64)
 
 		dataNascimento, err := time.Parse("2006-01-02", req.DataNascimento)
 		if err != nil {
@@ -54,54 +56,48 @@ func CreateFuncionario(db *sql.DB) gin.HandlerFunc {
 		senhaHash := fmt.Sprintf("%x", md5.Sum([]byte(req.Senha)))
 
 		var usuarioID int
-		err = tx.QueryRow(`
+		result, err = tx.Exec(`
 			INSERT INTO usuario (id_endereco, nome, cpf, data_nascimento, telefone, tipo_usuario, senha_hash)
 			VALUES (?, ?, ?, ?, ?, 'FUNCIONARIO', ?)`,
-			enderecoID, req.Nome, req.CPF, dataNascimento, req.Telefone, senhaHash).Scan(&usuarioID)
+			enderecoID, req.Nome, req.CPF, dataNascimento, req.Telefone, senhaHash)
 		
 		if err != nil {
-			result, execErr := tx.Exec(`
-				INSERT INTO usuario (id_endereco, nome, cpf, data_nascimento, telefone, tipo_usuario, senha_hash)
-				VALUES (?, ?, ?, ?, ?, 'FUNCIONARIO', ?)`,
-				enderecoID, req.Nome, req.CPF, dataNascimento, req.Telefone, senhaHash)
-			
-			if execErr != nil {
-				if execErr.Error() == "Error 1062: Duplicate entry" {
-					c.JSON(http.StatusConflict, gin.H{"error": "CPF already exists"})
-				} else {
-					c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
-				}
-				return
+			if strings.Contains(err.Error(), "Duplicate entry") && strings.Contains(err.Error(), "cpf") {
+				c.JSON(http.StatusConflict, gin.H{"error": "CPF already exists"})
+			} else {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user: " + err.Error()})
 			}
-			
-			usuarioID64, _ := result.LastInsertId()
-			usuarioID = int(usuarioID64)
+			return
 		}
+		
+		usuarioID64, err := result.LastInsertId()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user ID"})
+			return
+		}
+		usuarioID = int(usuarioID64)
 
 		var funcionarioID int
-		err = tx.QueryRow(`
+		result, err = tx.Exec(`
 			INSERT INTO funcionario (id_usuario, id_supervisor, codigo_funcionario, cargo)
 			VALUES (?, ?, ?, ?)`,
-			usuarioID, req.IDSupervisor, req.CodigoFuncionario, req.Cargo).Scan(&funcionarioID)
+			usuarioID, req.IDSupervisor, req.CodigoFuncionario, req.Cargo)
 		
 		if err != nil {
-			result, execErr := tx.Exec(`
-				INSERT INTO funcionario (id_usuario, id_supervisor, codigo_funcionario, cargo)
-				VALUES (?, ?, ?, ?)`,
-				usuarioID, req.IDSupervisor, req.CodigoFuncionario, req.Cargo)
-			
-			if execErr != nil {
-				if execErr.Error() == "Error 1062: Duplicate entry" {
-					c.JSON(http.StatusConflict, gin.H{"error": "Codigo funcionario already exists"})
-				} else {
-					c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create funcionario"})
-				}
-				return
+			if strings.Contains(err.Error(), "Duplicate entry") && strings.Contains(err.Error(), "codigo_funcionario") {
+				c.JSON(http.StatusConflict, gin.H{"error": "Codigo funcionario already exists"})
+			} else {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create funcionario: " + err.Error()})
 			}
-			
-			funcionarioID64, _ := result.LastInsertId()
-			funcionarioID = int(funcionarioID64)
+			return
 		}
+		
+		funcionarioID64, err := result.LastInsertId()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get funcionario ID"})
+			return
+		}
+		funcionarioID = int(funcionarioID64)
 
 		if err := tx.Commit(); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to commit transaction"})
