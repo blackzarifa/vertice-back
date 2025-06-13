@@ -117,7 +117,7 @@ func CreateFuncionario(db *sql.DB) gin.HandlerFunc {
 			CPF:               req.CPF,
 			DataNascimento:    dataNascimento,
 			Telefone:          req.Telefone,
-			Endereco:          &req.Endereco,
+			Endereco:          req.Endereco,
 		}
 		response.Endereco.ID = enderecoID
 
