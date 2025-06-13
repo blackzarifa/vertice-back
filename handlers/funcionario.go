@@ -22,7 +22,10 @@ func CreateFuncionario(db *sql.DB) gin.HandlerFunc {
 
 		tx, err := db.Begin()
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start transaction"})
+			c.JSON(
+				http.StatusInternalServerError,
+				gin.H{"error": "Failed to start transaction"},
+			)
 			return
 		}
 		defer tx.Rollback()
@@ -34,45 +37,68 @@ func CreateFuncionario(db *sql.DB) gin.HandlerFunc {
 			req.Endereco.CEP, req.Endereco.Local, req.Endereco.NumeroCasa,
 			req.Endereco.Bairro, req.Endereco.Cidade, req.Endereco.Estado,
 			req.Endereco.Complemento)
-		
+
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create address"})
+			c.JSON(
+				http.StatusInternalServerError,
+				gin.H{"error": "Failed to create address"},
+			)
 			return
 		}
-		
+
 		enderecoID64, err := result.LastInsertId()
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get address ID"})
+			c.JSON(
+				http.StatusInternalServerError,
+				gin.H{"error": "Failed to get address ID"},
+			)
 			return
 		}
 		enderecoID = int(enderecoID64)
 
 		dataNascimento, err := time.Parse("2006-01-02", req.DataNascimento)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid date format. Use YYYY-MM-DD"})
+			c.JSON(
+				http.StatusBadRequest,
+				gin.H{"error": "Invalid date format. Use YYYY-MM-DD"},
+			)
 			return
 		}
 
 		senhaHash := fmt.Sprintf("%x", md5.Sum([]byte(req.Senha)))
 
 		var usuarioID int
-		result, err = tx.Exec(`
+		result, err = tx.Exec(
+			`
 			INSERT INTO usuario (id_endereco, nome, cpf, data_nascimento, telefone, tipo_usuario, senha_hash)
 			VALUES (?, ?, ?, ?, ?, 'FUNCIONARIO', ?)`,
-			enderecoID, req.Nome, req.CPF, dataNascimento, req.Telefone, senhaHash)
-		
+			enderecoID,
+			req.Nome,
+			req.CPF,
+			dataNascimento,
+			req.Telefone,
+			senhaHash,
+		)
+
 		if err != nil {
-			if strings.Contains(err.Error(), "Duplicate entry") && strings.Contains(err.Error(), "cpf") {
-				c.JSON(http.StatusConflict, gin.H{"error": "CPF already exists"})
+			if strings.Contains(err.Error(), "Duplicate entry") &&
+				strings.Contains(err.Error(), "cpf") {
+				c.JSON(
+					http.StatusConflict,
+					gin.H{"error": "CPF already exists"},
+				)
 			} else {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user: " + err.Error()})
 			}
 			return
 		}
-		
+
 		usuarioID64, err := result.LastInsertId()
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user ID"})
+			c.JSON(
+				http.StatusInternalServerError,
+				gin.H{"error": "Failed to get user ID"},
+			)
 			return
 		}
 		usuarioID = int(usuarioID64)
@@ -82,25 +108,35 @@ func CreateFuncionario(db *sql.DB) gin.HandlerFunc {
 			INSERT INTO funcionario (id_usuario, id_supervisor, codigo_funcionario, cargo)
 			VALUES (?, ?, ?, ?)`,
 			usuarioID, req.IDSupervisor, req.CodigoFuncionario, req.Cargo)
-		
+
 		if err != nil {
-			if strings.Contains(err.Error(), "Duplicate entry") && strings.Contains(err.Error(), "codigo_funcionario") {
-				c.JSON(http.StatusConflict, gin.H{"error": "Codigo funcionario already exists"})
+			if strings.Contains(err.Error(), "Duplicate entry") &&
+				strings.Contains(err.Error(), "codigo_funcionario") {
+				c.JSON(
+					http.StatusConflict,
+					gin.H{"error": "Codigo funcionario already exists"},
+				)
 			} else {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create funcionario: " + err.Error()})
 			}
 			return
 		}
-		
+
 		funcionarioID64, err := result.LastInsertId()
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get funcionario ID"})
+			c.JSON(
+				http.StatusInternalServerError,
+				gin.H{"error": "Failed to get funcionario ID"},
+			)
 			return
 		}
 		funcionarioID = int(funcionarioID64)
 
 		if err := tx.Commit(); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to commit transaction"})
+			c.JSON(
+				http.StatusInternalServerError,
+				gin.H{"error": "Failed to commit transaction"},
+			)
 			return
 		}
 
@@ -149,7 +185,10 @@ func ListFuncionarios(db *sql.DB) gin.HandlerFunc {
 
 		rows, err := db.Query(query)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch funcionarios"})
+			c.JSON(
+				http.StatusInternalServerError,
+				gin.H{"error": "Failed to fetch funcionarios"},
+			)
 			return
 		}
 		defer rows.Close()
