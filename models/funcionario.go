@@ -34,3 +34,20 @@ type FuncionarioResponse struct {
 	Telefone          string    `json:"telefone"`
 	Endereco          *Endereco `json:"endereco,omitempty"`
 }
+
+type FuncionarioListItem struct {
+	ID                int    `json:"id_funcionario"`
+	CodigoFuncionario string `json:"codigo_funcionario"`
+	Cargo             string `json:"cargo"`
+	IDSupervisor      *int   `json:"id_supervisor,omitempty"`
+	Nome              string `json:"nome"`
+	CPF               string `json:"cpf"`
+	DataNascimento    string `json:"data_nascimento"`
+	Telefone          string `json:"telefone"`
+	CEP               string `json:"cep"`
+	Local             string `json:"local"`
+	NumeroCasa        int    `json:"numero_casa"`
+	Bairro            string `json:"bairro"`
+	Cidade            string `json:"cidade"`
+	Estado            string `json:"estado"`
+}
