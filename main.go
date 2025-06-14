@@ -7,6 +7,7 @@ import (
 
 	"github.com/blackzarifa/vertice-back/config"
 	"github.com/blackzarifa/vertice-back/handlers"
+	"github.com/blackzarifa/vertice-back/middleware"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 )
@@ -46,8 +47,11 @@ func main() {
 }
 
 func setupRoutes(router *gin.Engine, db *sql.DB) {
-	// Create handler
+	jwtSecret := "vertice-bank-secret-2025"
+
+	// Create handlers
 	funcHandler := handlers.NewFuncionarioHandler(db)
+	authHandler := handlers.NewAuthHandler(db, jwtSecret)
 
 	// API routes
 	v1 := router.Group("/api/v1")
@@ -57,8 +61,16 @@ func setupRoutes(router *gin.Engine, db *sql.DB) {
 			c.JSON(200, gin.H{"status": "ok", "database": "connected"})
 		})
 
-		// Funcionario routes
-		v1.POST("/funcionarios", funcHandler.Create)
-		v1.GET("/funcionarios", funcHandler.List)
+		// Auth routes (public)
+		v1.POST("/auth/login", authHandler.Login)
+
+		// Protected routes
+		protected := v1.Group("/")
+		protected.Use(middleware.AuthRequired(jwtSecret))
+		{
+			// Funcionario routes
+			protected.POST("/funcionarios", funcHandler.Create)
+			protected.GET("/funcionarios", funcHandler.List)
+		}
 	}
 }
