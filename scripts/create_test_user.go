@@ -13,7 +13,7 @@ import (
 
 func main() {
 	// Create a test funcionario
-	funcionarioData := map[string]interface{}{
+	funcionarioData := map[string]any{
 		"nome":               "João Silva",
 		"cpf":                "12345678901",
 		"data_nascimento":    "1990-05-15",
@@ -21,7 +21,7 @@ func main() {
 		"senha":              "senha123",
 		"codigo_funcionario": "FUNC001",
 		"cargo":              "GERENTE",
-		"endereco": map[string]interface{}{
+		"endereco": map[string]any{
 			"cep":         "01310-100",
 			"local":       "Avenida Paulista",
 			"numero_casa": 1578,
