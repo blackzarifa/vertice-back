@@ -8,6 +8,7 @@ import (
 	"github.com/blackzarifa/vertice-back/config"
 	"github.com/blackzarifa/vertice-back/handlers"
 	"github.com/blackzarifa/vertice-back/middleware"
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 )
@@ -32,6 +33,15 @@ func main() {
 
 	// Setup routes
 	router := gin.Default()
+
+	// Configure CORS
+	config := cors.DefaultConfig()
+	config.AllowOrigins = []string{"http://localhost:5173"}
+	config.AllowMethods = []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}
+	config.AllowHeaders = []string{"Origin", "Content-Type", "Authorization"}
+	config.AllowCredentials = true
+	router.Use(cors.New(config))
+
 	setupRoutes(router, db)
 
 	// Start server
